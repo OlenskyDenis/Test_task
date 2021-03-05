@@ -2,96 +2,62 @@
 
 namespace app\controllers;
 
-use Yii;
-use yii\filters\AccessControl;
+use app\models\Login;
 use yii\web\Controller;
-use yii\web\Response;
-use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
+use app\models\Sign_up;
+use app\models\User;
+use Yii;
 
 class SiteController extends Controller
 {
-    public function behaviors()
-    {
-        return [
-            'access' => [
-                'class' => AccessControl::className(),
-                'only' => ['logout'],
-                'rules' => [
-                    [
-                        'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
-            'verbs' => [
-                'class' => VerbFilter::className(),
-                'actions' => [
-                    'logout' => ['post'],
-                ],
-            ],
-        ];
-    }
-
-    public function actions()
-    {
-        return [
-            'error' => [
-                'class' => 'yii\web\ErrorAction',
-            ],
-            'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-            ],
-        ];
-    }
-
     public function actionIndex()
     {
-        return $this->render('index');
-    }
-
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
+        if(!Yii::$app->user->isGuest){
+            $model = new User();
+            
+            return $this->render('index',[
+            'model' => $model
+        ]); 
         }
 
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
+        $login_model = new Login();
+       
+        if(isset($_POST['Login'])){
+            $login_model->attributes = Yii::$app->request->post('Login');
+
+            if($login_model->validate()){
+                Yii::$app->user->login($login_model->getUser());
+                return $this->goHome();
+            }
         }
 
-        $model->password = '';
-        return $this->render('login', [
-            'model' => $model,
+        return $this->render('login',[
+            'login_model' => $login_model
         ]);
     }
 
-    public function actionLogout()
+    public function actionSign_up()
     {
-        Yii::$app->user->logout();
+        $model = new Sign_up();
 
-        return $this->goHome();
-    }
+        if(isset($_POST['Sign_up'])){
+            // var_dump($_POST['Sign_up']);die();
+            $model->attributes = Yii::$app->request->post('Sign_up');
 
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
+            if($model->validate() && $model->sign_up()){
+                return $this->goHome();
+            }
         }
-        return $this->render('contact', [
-            'model' => $model,
+
+        return $this->render('sign_up',[
+            'model' => $model
         ]);
     }
 
-    public function actionAbout()
-    {
-        return $this->render('about');
+    public function actionLogout(){
+        if(!Yii::$app->user->isGuest){
+            Yii::$app->user->logout();
+            return $this->redirect(['index']);
+        }
     }
 }
